@@ -21,6 +21,7 @@ e.g. "Best of Blind Willie:My Eyes Have Seen the Glory","Blues/Blind Willie/Best
 There is an option to provide a new prefix, which is the path on the destination server.
 e.g. /mnt/music/Albums
 
+TODO: I really should remove the file extension from the key. 
 '''
 import errno
 import argparse
