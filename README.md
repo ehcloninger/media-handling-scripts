@@ -14,10 +14,35 @@ mostly lost on me. MP3 at 320K bitrate works for my needs, as this library is
 being streamed via Navidrome and typically sent to Bluetooth devices. If I were
 playing from a dedicated device to a high-end audio system, I'd feel differently.
 
-Some notes on the code.
+## Notes
 
 * Pylance complains about subclasses not being exported by mutagen. Even though it flags this
 as an error, it does work. This should be a warning, but Pylance treats it as an error. It's safe
 to ignore.
 * I should refactor the file scanning code into a separate module, as I use it in nearly every
 one of these scripts. Someday...
+
+## Requirements
+
+You may need some or all of these to run the scripts. Sorry, I don't have a requirements.txt
+for you to run.
+
+* beautifulsoup4
+* bs4
+* eyeD3
+* ffcuesplitter
+* ffmpeg
+* ffprobe
+* lxml
+* musicbrainzngs
+* mutagen
+* PlexAPI
+* pyffmpeg
+* python-ffmpeg
+* python-slugify
+* regex
+* requests
+* requests-oauthlib
+* setuptools
+* Unidecode
+* urllib3 

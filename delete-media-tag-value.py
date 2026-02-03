@@ -22,7 +22,7 @@ from pathlib import Path
 from unidecode import unidecode
 import mutagen
 import mutagen.id3
-
+import re
 
 def get_ext(filename, tolower=False) -> str:
     ext = ""
@@ -109,11 +109,15 @@ def main():
         id3file = mutagen.id3.ID3(mediafile)
         if id3file is not None:
             to_delete = list()
+            to_modify = list()
             for tag in filter(lambda t: t.startswith(("")), id3file):
                 frame = id3file[tag]
                 if isinstance(frame, mutagen.id3.TextFrame):
                     if term_exists(str(getattr(frame,"text")), terms, args.case):
-                        to_delete.append(tag)
+                        if isinstance(frame, mutagen.id3.TPE1) or isinstance(frame, mutagen.id3.TPE2):
+                            to_modify.append(tag)
+                        else:
+                            to_delete.append(tag)
                 elif isinstance(frame, mutagen.id3.UrlFrame):
                     if term_exists(str(getattr(frame,"url")), terms, args.case):
                         to_delete.append(tag)
@@ -121,13 +125,25 @@ def main():
                     if term_exists(str(getattr(frame,"text")), terms, args.case):
                         to_delete.append(tag)
 
-            if len(to_delete) > 0:
+            if (len(to_delete) > 0) or (len(to_modify) > 0):
+                for tag in to_modify:
+                    frame = id3file[tag]
+                    text = getattr(frame,"text")
+                    if len(text) > 0:
+                        text = text[0] 
+                        for term in terms:
+                            itext = re.compile(re.escape(term), re.IGNORECASE)
+                            text = itext.sub("", text).strip()
+                        text = text.replace("  "," ")
+                        setattr(frame, "text", text)
+                        output_str += " " + id3file[tag].FrameID
+
                 for tag in to_delete:
                     output_str += " " + id3file[tag].FrameID
                     del id3file[tag]
                 if not args.dryrun:
                     id3file.save()
-        print(output_str)
+                print(output_str)
 
 if __name__ == '__main__':
     main()

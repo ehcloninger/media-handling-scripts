@@ -35,7 +35,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\music\\Country","-l","delete-media-tag-terms.txt"]
+            "args": ["E:\\YTM.Playlists\\Sunshine Dreams","-l","E:\\music\\Scripts\\delete-media-tag-terms.txt"]
         },
         {
             "name": "fix-playlists",
