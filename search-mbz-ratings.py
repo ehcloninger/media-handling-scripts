@@ -37,6 +37,7 @@ def main():
     parser.add_argument("-p", "--params", help="Extra eyed3 params (default: --quiet)", default="--quiet")
     parser.add_argument("-z", "--zero", help="Set items with no rating to 0 (default: False)", action="store_true", default=False)
     parser.add_argument("-v", "--verbose", help="Be verbose (default: False)", action="store_true", default=False)
+    parser.add_argument("-w", "--overwrite", help="Overwrite existing ratings in POPM tags (default: False)", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -90,6 +91,7 @@ def main():
     if args.verbose:
         print(Fore.GREEN + "Processing %d Files" % (total) + Fore.BLACK)
     printed = ""
+    print("Step 1: Find Media Files")
     for mediafile in mediafiles:
         head,tail = os.path.split(Path(mediafile))
         if args.verbose:
@@ -104,7 +106,8 @@ def main():
                     "release_id": "",
                     "recording_id": "",
                     "track_no": 0,
-                    "rating": 0
+                    "rating": 0,
+                    "exists" : False
                 }
                 for tag in filter(lambda t: t.startswith(("")), id3file):
                     frame = id3file[tag]
@@ -116,17 +119,21 @@ def main():
                             if idx >= 0:
                                 track_no = track_no[0:idx]
                             recording["track_no"] = int(track_no)
+                    if isinstance(frame, mutagen.id3.POPM):
+                        rating = getattr(frame, "rating")
+                        recording["rating"] = int(rating)
+                        recording["exists"] = True
                     elif isinstance(frame, mutagen.id3.TXXX):
                         desc = getattr(frame, "desc")
                         text = getattr(frame, "text")
                         if len(text) > 0:
                             if desc == "MusicBrainz Album Id":
-                                release_ids.add(text[0])
                                 recording["release_id"] = text[0]
                             elif desc == "MusicBrainz Release Track Id":
                                 recording["recording_id"] = text[0]
             else:
-                print("Can't find necessary ID3 tags for %s" % (mediafile))
+                if args.verbose:
+                    print("Can't find necessary ID3 tags for %s" % (mediafile))
                 continue
 
         except Exception as e:
@@ -134,19 +141,24 @@ def main():
             continue
 
         if recording["track_no"] == 0 or recording["release_id"] == "":
-            print("Can't find necessary ID3 tags for %s" % (mediafile))
+            if args.verbose:
+                print("Can't find necessary ID3 tags for %s" % (mediafile))
             continue
 
-        recordings.append(recording)
+        if (not recording["exists"]) or args.overwrite:
+            if recording["rating"] > 0 or args.zero:
+                release_ids.add(recording["release_id"])
+                recordings.append(recording)
 
     if len(release_ids) == 0:
-        print("No Releases found among input files at %s" % args.input)
+        print("No Releases needing changed found among input files at %s" % args.input)
         return
     
     # Go through the album IDs found and request JSON information about the album from the MB server
     i = 1
     total = len(release_ids)
     output_recordings = []
+    print("Step 2: Query Server for information on %d releases" % (total))
     for rid in release_ids:
         this_release = []
 
@@ -222,8 +234,12 @@ def main():
         for recording in this_release:
             output_recordings.append(recording)
         
+    # To be honest, this should probably just reopen the file with mutagen and write the POPM
+    # tag directly, but I'll use this for now.
+    sorted_recordings = sorted(output_recordings, key=lambda k: k["path"])
+
     outfile = open(args.output, "wt", encoding="utf-8")
-    for recording in output_recordings:
+    for recording in sorted_recordings:
         if recording["rating"] > 0 or args.zero:
             outfile.write("eyed3 \"%s\" --add-popularity \"%s:%d:0\" %s\n" % 
                           (recording["path"], args.email, recording["rating"], args.params))

@@ -4,7 +4,23 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "name": "generate-random-playlist",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["-l","ratings-list.txt","-o","playlist.m3u","-a","George Jones","-a","Merle Haggard","-a","Hank Williams","-r","100"]
+        },
 
+        {
+            "name": "generate-ratings-list",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums"]
+        },
         {
             "name": "fix-media-file-names",
             "type": "debugpy",
@@ -51,7 +67,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": [".\\test","-s","http://192.168.2.90:5000","-o",".\\output.bat","-v"]
+            "args": ["\\music\\Rock\\Bob Seger","-s","http://192.168.2.90:5000","-o",".\\output.bat"]
         }
     ]
 }
