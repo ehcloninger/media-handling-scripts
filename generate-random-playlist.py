@@ -10,6 +10,18 @@ import random
 import csv
 from datetime import datetime
 
+# Source - https://stackoverflow.com/a/354130
+# Posted by S.Lott, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-02-03, License - CC BY-SA 4.0
+
+def is_number(s):
+    try:
+        int(s)
+    except ValueError:  # Failed
+        return False
+    else:  # Succeeded
+        return True
+
 def main():
     parser = argparse.ArgumentParser(description='Generate a playlist of random songs based on year, genre, rating.')
     parser.add_argument('-l','--list', help='List of all files', required=True)
@@ -33,6 +45,31 @@ def main():
     if args.playlist is not None and len(args.playlist) > 0:
         playlist = args.playlist
 
+    years = []
+    if args.year is not None:
+        for year in args.year:
+            # is it a range of years
+            idx = year.find('-')
+            if idx >= 0:
+                start = int(year[:idx])
+                end = int(year[idx+1:])
+                if end < start:
+                    tmp = end
+                    end = start
+                    start = tmp
+                for i in range(start, end + 1):
+                    years.append(i)
+            else:
+                if not is_number(year) or len(year) < 2:
+                    print("%s is not a year" % year)
+                    return
+                year = int(year)
+                currentyear = datetime.now().year
+                if year < 1890 or year > currentyear:
+                    print("%d is not a valid year" % year)
+                    return
+                years.append(year)
+                
     recordings = []
     with open(args.list,'rt',encoding="utf-8") as f:  
         reader = csv.reader(f) 
@@ -43,19 +80,21 @@ def main():
                 "title": line[2],
                 "genre": line[3],
                 "rating": int(line[4]),
-                "year": line[5],
+                "year": int(line[5]),
                 "length": int(line[6])
             }
             if args.all:
                 add = True
-                if len(args.artist) > 0:
-                    if recording["artist"] not in args.artist:
-                        add = False
-                if len(args.genre) > 0:
-                    if recording["genre"] not in args.genre:
-                        add = False
-                if len(args.year) > 0:
-                    if recording["year"] not in args.year:
+                if args.artist is not None:
+                    if len(args.artist) > 0:
+                        if recording["artist"] not in args.artist:
+                            add = False
+                if args.genre is not None:
+                    if len(args.genre) > 0:
+                        if recording["genre"] not in args.genre:
+                            add = False
+                if len(years) > 0:
+                    if recording["year"] not in years:
                         add = False
                 if args.rating > 0:
                     if recording["rating"] < args.rating:
@@ -68,21 +107,24 @@ def main():
                     if len(args.artist) > 0:
                         if recording["artist"] in args.artist:
                             add = True
-                if args.genre is not None:
+                elif args.genre is not None:
                     if len(args.genre) > 0:
                         if recording["genre"] in args.genre:
                             add = True
-                if args.year is not None:
-                    if len(args.year) > 0:
-                        if recording["year"] in args.year:
-                            add = True
+                elif len(years) > 0:
+                    if recording["year"] in args.year:
+                        add = True
+                elif args.rating > 0:
+                    if recording["rating"] >= args.rating:
+                        add = True
+
                 if add:
                     recordings.append(recording)
 
     count = len(recordings)
     items = []
     items_added = 1
-    while (items_added < args.number) and (len(recordings) > 0):
+    while (items_added <= args.number) and (len(recordings) > 0):
         idx = random.randrange(count)
         recording = recordings[idx]
         if args.rating > 0:
