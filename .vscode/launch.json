@@ -27,7 +27,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\music\\Rock\\Oasis"]
+            "args": ["test"]
         },
         {
             "name": "delete-media-tag-value",

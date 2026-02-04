@@ -116,6 +116,17 @@ def main():
         # double spaces
         ret = ret.replace('  ', ' ')
 
+        # We took everything, so maybe try something less drastic
+        # Assumes the file names are DD-TTT - Title.ext
+        if len(ret) <= 8:
+            ret = outputfilename
+            ret = ret.replace("(", "")
+            ret = ret.replace(")", "")
+            ret = ret.replace("[", "")
+            ret = ret.replace("]", "")
+            if len(ret) <= 8:
+                continue
+
         # TODO: Unicode extended characters used to bypass ASCII (e.g. emdash, division sign)
 
         if ret == outputfilename:
