@@ -146,7 +146,7 @@ def main():
             continue
 
         if (not recording["exists"]) or args.overwrite:
-            if recording["rating"] > 0 or args.zero:
+            if recording["rating"] == 0 or args.zero:
                 release_ids.add(recording["release_id"])
                 recordings.append(recording)
 
