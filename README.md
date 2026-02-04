@@ -113,6 +113,10 @@ Generates a CSV file to be used to generate a randomized playlist based on genre
 artist, and rating. Gets this information by recursively walking the input path and
 finding the relevant ID3 metadata fields in each file.
 
+The reason I generate a CSV file rather than querying the library each time is because I would
+rather not process the entire library of 25,000+ songs each time I want to generate a new
+playlist.
+
 `usage: generate-metadata-list.py [-h] [-o OUTPUT] [-x EXTRACTPREFIX] [-p PREFIX] [-v] input`
 
 The `-x` parameter will remove the local file system prefix to the music library. This
@@ -191,6 +195,17 @@ me to provide a rating or group (or both) to each title with minimal typing.
 
 I plan to use the grouping field in the future when creating daily playlists with how frequently
 I'd like to hear a song (daily, weekly, monthly, quarterly, yearly, or never).
+
+### fix-ytm-titles
+
+Another script that's probably specific to me. Attempts to determine artist and title from the file name. Meant 
+for when the input is of the form `number - artist - title.ext`, which often happens with songs pulled from
+streaming sites.
+
+`usage: fix-ytm-titles.py [-h] [-o OUTPUT] input`
+
+Generates a batch file to run that called eyed3 to set fields and then renames the file using REN.
+This has to run on Windows CMD or Powershell.
 
 ## Requirements
 
