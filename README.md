@@ -41,6 +41,10 @@ You can provide multiple `-t` parameters or put them all in a file and use the `
 
 The script is case insensitive by default.
 
+There is a special case for this one if the string is found in TPE1 or TPE2 frame, it will
+remove the string from the data, but not delete the entire frame. This is to prevent losing
+the artist names. Probably need to extend this to TIT2.
+
 ### extract_covers
 
 I did not create this, but this is my modified version of the original. The original is

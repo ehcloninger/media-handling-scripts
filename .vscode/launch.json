@@ -19,7 +19,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums"]
+            "args": ["-o","ratings-list-2.txt", "E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums","-z"]
         },
         {
             "name": "fix-media-file-names",
@@ -27,7 +27,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["test"]
+            "args": ["E:\\Music"]
         },
         {
             "name": "delete-media-tag-value",
@@ -76,6 +76,14 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": ["\\YTM.Playlists"]
+        },
+        {
+            "name": "extract-covers",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["E:\\music"]
         }
     ]
 }

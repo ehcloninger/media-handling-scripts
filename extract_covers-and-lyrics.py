@@ -14,14 +14,6 @@ IMAGE_EXTENSION = '.jpg'
 SONGS_EXTENSION = '.mp3'
 COVER_ART_FILE = 'cover.jpg'
 EXCLUDED_SUBDIR = 'TEMP'  # subdirs with this name are skipped from searching inside
-COVER_ART_DATA_FILE = '000-song-album-cover-data.json'  # json file with full data from extracted cover art files
-'''
-        album_data['song'] = MP3 song filename
-        album_data['album'] = MP3 album ID3 tag
-        album_data['cover_name'] = Cover Art (extracted from MP3 file) jpg filename
-        album_data['cover_size'] = Cover Art dimensions (horizontal pixels x vertical pixels format)
-'''
-
 
 def get_data_files(data_files_directory, file_type):
     """
@@ -84,7 +76,8 @@ if __name__ == '__main__':
         json COVER_ART_DATA_FILE with full info about the extracted cover art files
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--directory', required=True, help='folder to parse mp3 files')
+    parser.add_argument('directory', help='folder to parse mp3 files')
+    parser.add_argument('-v','--overwrite', action="store_true", help='Overwrite', default=False)
 
     args = parser.parse_args()
     mp3_directory = args.directory
@@ -102,83 +95,69 @@ if __name__ == '__main__':
 
     print('MP3 Files to review: ' + str(len(mp3_files)))
     images_stored = 0
+    lyrics_stored = 0
     album_data_list = list()
+    covers_completed = set()
+    lyrics_completed = set()
     for song_file in mp3_files:
         album_data = dict()
-        print("> %s" % (song_file))
+        safe_cover_name = "cover"
+
+        # print("> %s" % (song_file))
         eyed3.log.setLevel("ERROR")
         song = eyed3.load(song_file)
-        ##################################################################################################
-        #                                  BUILDING COVER ART FILENAME                                   #
-        #                                                                                                #
-        ##################################################################################################
-        dir_name = os.path.split(song_file)[0]
-        cover_name = os.path.splitext(os.path.split(song_file)[1])[0]  # file_name without ext
-        ext_name = IMAGE_EXTENSION
-        album_name = song.tag.album
-        try:
 
-            size_name = str(Image.Image.getdata(Image.open(io.BytesIO(song.tag.images[0].image_data))).size[0]) + "x" \
-                        + str(Image.Image.getdata(Image.open(io.BytesIO(song.tag.images[0].image_data))).size[1])
-
-        except Exception as e:  # Exception: we cannot recover the cover art dimensions
-            print("Problem extracting cover art from " + song_file)
-            print('get-size-from-cover-art: Exception 002:' + str(e))
-            continue
-
-        # https://stackoverflow.com/a/46590727 #getting failsafe filenames (album has some not failsafe characthers sometimes)
-        safe_cover_name = cover_name + "_" + slugify(album_name,
-                                                     entities=True,
-                                                     decimal=True,
-                                                     hexadecimal=True,
-                                                     max_length=0,
-                                                     word_boundary=False,
-                                                     separator=' ',
-                                                     save_order=False,
-                                                     stopwords=(),
-                                                     regex_pattern=None,
-                                                     lowercase=False,
-                                                     replacements=(),
-                                                     allow_unicode=False) + "_" + size_name
-        album_data['song'] = cover_name = os.path.splitext(os.path.split(song_file)[1])[0]
-        album_data['album'] = album_name
-        album_data['cover_name'] = safe_cover_name + ext_name
-        album_data['cover_size'] = size_name
-
-        safe_cover_name = "cover"
-        cover_name = os.path.join(os.path.split(song_file)[0],
-                                  COVER_ART_FILE)
         ##################################################################################################
         #                                 END BUILDING COVER ART FILENAME                                #
         #                                                                                                #
         ##################################################################################################
         # if there contains many images
         # https://stackoverflow.com/a/63145832
-        try:
-            if not os.path.isfile(cover_name):
-                print('MP3 File trying to retrieve ART cover:' + song_file)
-                img = Image.open(io.BytesIO(song.tag.images[0].image_data))
-                img.save(cover_name)
-                print("Cover Art has been stored inside " + cover_name)
-                images_stored += 1
-                album_data_list.append(album_data)
+        tag = getattr(song, "tag")
+        head, tail = os.path.split(song_file)
+        cover_name = os.path.join(head, COVER_ART_FILE)
+        if not head in covers_completed:
+            print("%s" % head)
+            if not os.path.isfile(cover_name) or args.overwrite:
+                images = getattr(tag, "images")
+                img = Image.open(io.BytesIO(images[0].image_data)).convert(mode="RGB")
+                try:
+                    img.save(cover_name)
+                    covers_completed.add(head)
+                except Exception as e:  # Exception: we cannot recover the cover art and store it at the output file
+                    print("Problem extracting cover art from " + song_file)
+                    print(str(e))
+                    continue
+                else:
+                    images_stored += 1
 
-        except Exception as e:  # Exception: we cannot recover the cover art and store it at the output file
-            print("Problem extracting cover art from " + song_file)
-            print('get&store-cover-art: Exception 003:' + str(e))
-            continue
-
-    try:
-        json_name = os.path.join(mp3_directory, #os.path.split(song_file)[0],
-                                 COVER_ART_DATA_FILE)
-        if album_data_list:
-            with open(json_name, 'w') as fp:
-                # we store the extracted cover art files info inside a json file stored at root mp3 input directory
-                json.dump(album_data_list, fp)
-
-    except Exception as e:  # Exception: we cannot store the restult json file
-        print("Problem storing json file with cover album data: " + json_name)
-        print('store-final-json: Exception 004:' + str(e))
+        idx = tail.rfind(".")
+        if idx > 0:
+            tail = tail[0:idx] + ".txt"
+        else:
+            tail += ".txt"
+        lyrics_name = os.path.join(head, tail)
+        if not os.path.isfile(lyrics_name) or args.overwrite:
+            lyrics = getattr(tag, "lyrics")
+            if lyrics is not None:
+                if len(lyrics) > 0:
+                    try:
+                        with open(lyrics_name, mode="wt", encoding="utf-8") as file:
+                            for lyric in lyrics:
+                                data = bytes(getattr(lyric, "data"))
+                                the_str = data.decode(encoding="utf-8")
+                                if the_str[0] == '\x03':
+                                    idx = the_str.find('\x00')
+                                    if idx >= 0:
+                                        the_str = the_str[idx + 1:]
+                                    the_str = the_str.replace('\x00','')
+                                file.write("%s\n" % (the_str))
+                    except:
+                        print("Problem extracting lyrics from " + song_file)
+                        print(str(e))
+                        continue
+                    lyrics_stored += 1
 
     print("Images stored to disk: " + str(images_stored))
+    print("Lyrics stored to disk: " + str(lyrics_stored))
     sys.exit()

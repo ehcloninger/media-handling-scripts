@@ -29,10 +29,10 @@ def main():
     parser = argparse.ArgumentParser(description='Group and rate media files with ID3 tags')
     parser.add_argument('input', help='Media file or a folder of media files')
     parser.add_argument("-o", "--output", help="Output File", default="ratings-list.txt")
-    parser.add_argument("-x", "--extractprefix", help="Prefix to remove from path names", default="E:/Music/")
+    parser.add_argument("-x", "--extractprefix", help="Prefix to remove from path names", default="E:\\Music\\")
     parser.add_argument("-p", "--prefix", help="Prefix to add from path names", default="/mnt/music/Albums")
     parser.add_argument("-v", "--verbose", help="Be verbose (default: False)", action="store_true", default=False)
-
+    parser.add_argument("-z", "--zero", help="Output files with 0 rating (default: False)", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -79,6 +79,7 @@ def main():
                 filepath = filepath.replace(args.extractprefix, "")
         if (args.prefix):
             filepath = args.prefix + "/" + filepath
+            filepath = filepath.replace("/./","/")
             filepath = filepath.replace("//","/")
 
 
@@ -101,31 +102,56 @@ def main():
                 tags = getattr(mp3file, "tags")
                 for tag in filter(lambda t: t.startswith(("")), tags):
                     frame = tags[tag]
-                    if isinstance(frame, mutagen.id3.POPM):
+                    if isinstance(frame, mutagen.id3.POPM): # type: ignore
                         rating = getattr(frame, "rating")
-                    elif isinstance(frame, mutagen.id3.TXXX):
+                    elif isinstance(frame, mutagen.id3.TXXX): # type: ignore
                         key = getattr(frame, "desc")
                         if key == "originalyear":
                             tmp = getattr(frame, "text")
                             if len(tmp) > 0:
-                                year = tmp[0]
+                                # if year == 0:
+                                year = str(tmp[0])
                                 if len(year) > 4:
+                                    print("%s is %s" % (mediafile, year))
                                     year = year[0:4]
                                 year = int(year)
-                    elif isinstance(frame, mutagen.id3.TIT2):
+                                # else:
+                                #     if int(tmp[0]) != year and args.verbose:
+                                #         print("Conflicting dates for %s (%s, %d)" % (mediafile, tmp[0], year))
+                    elif isinstance(frame, mutagen.id3.TIT2): # type: ignore
                         tmp = getattr(frame, "text")
                         if len(tmp) > 0:
                             title = tmp[0]
-                    elif isinstance(frame, mutagen.id3.TPE1):
+                    elif isinstance(frame, mutagen.id3.TDRC): # type: ignore
+                        # Choosing to prioritize the text frame originalyear over
+                        # this if both exist. While this field is likely to be more
+                        # accurate historically, I deliberately want each album to
+                        # have the same year for each track so that Navidrome
+                        # doesn't show multiple albums differentiated only by year.
+                        tmp = getattr(frame, "text")
+                        if len(tmp) > 0:
+                            if year == 0:
+                                year = str(tmp[0])
+                                # MBZ puts in YYYY-MM-DD if it's available. I just want the year
+                                if len(year) > 4:
+                                    year = year[0:4]
+                                    print("%s is %s" % (mediafile, year))
+                                year = int(year)
+                            # else:
+                            #     if int(tmp[0]) != year and args.verbose:
+                            #         print("Conflicting dates for %s (%s, %d)" % (mediafile, tmp[0], year))
+                    elif isinstance(frame, mutagen.id3.TPE1): # type: ignore
                         tmp = getattr(frame, "text")
                         if len(tmp) > 0:
                             artist = tmp[0]
-                    elif isinstance(frame, mutagen.id3.TCON):
+                    elif isinstance(frame, mutagen.id3.TCON): # type: ignore
                         tmp = getattr(frame, "genres")
                         if len(tmp) > 0:
                             genre = tmp[0]
 
-                if rating > 0:
+                if rating > 0 or args.zero:
+                    if year == 0:
+                        print("%s: Year is 0" % (mediafile))
                     outfile.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%d\",\"%d\",\"%d\"\n" % (filepath.replace("\"","\\\""), artist.replace("\"","\"\""), title.replace("\"","\"\""), genre.replace("\"","\"\""), rating, year, length))
             else:
                 print("Can't find necessary ID3 tags for %s" % (mediafile))
