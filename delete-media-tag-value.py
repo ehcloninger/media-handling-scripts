@@ -112,16 +112,16 @@ def main():
             to_modify = list()
             for tag in filter(lambda t: t.startswith(("")), id3file):
                 frame = id3file[tag]
-                if isinstance(frame, mutagen.id3.TextFrame):
+                if isinstance(frame, mutagen.id3.TextFrame): # type: ignore
                     if term_exists(str(getattr(frame,"text")), terms, args.case):
-                        if isinstance(frame, mutagen.id3.TPE1) or isinstance(frame, mutagen.id3.TPE2):
+                        if isinstance(frame, mutagen.id3.TPE1) or isinstance(frame, mutagen.id3.TPE2): # type: ignore
                             to_modify.append(tag)
                         else:
                             to_delete.append(tag)
-                elif isinstance(frame, mutagen.id3.UrlFrame):
+                elif isinstance(frame, mutagen.id3.UrlFrame): # type: ignore
                     if term_exists(str(getattr(frame,"url")), terms, args.case):
                         to_delete.append(tag)
-                elif isinstance(frame, mutagen.id3.USLT):
+                elif isinstance(frame, mutagen.id3.USLT): # type: ignore
                     if term_exists(str(getattr(frame,"text")), terms, args.case):
                         to_delete.append(tag)
 

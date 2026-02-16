@@ -111,19 +111,22 @@ def main():
                 }
                 for tag in filter(lambda t: t.startswith(("")), id3file):
                     frame = id3file[tag]
-                    if isinstance(frame, mutagen.id3.TRCK):
+                    if isinstance(frame, mutagen.id3.TRCK): # type: ignore
                         track = getattr(frame, "text")
                         if len(track) > 0:
                             track_no = track[0]
                             idx = track_no.find('/')
                             if idx >= 0:
                                 track_no = track_no[0:idx]
+                            idx = track_no.find('.')
+                            if idx >= 0:
+                                track_no = track_no[0:idx]
                             recording["track_no"] = int(track_no)
-                    if isinstance(frame, mutagen.id3.POPM):
+                    if isinstance(frame, mutagen.id3.POPM): # type: ignore
                         rating = getattr(frame, "rating")
                         recording["rating"] = int(rating)
                         recording["exists"] = True
-                    elif isinstance(frame, mutagen.id3.TXXX):
+                    elif isinstance(frame, mutagen.id3.TXXX): # type: ignore
                         desc = getattr(frame, "desc")
                         text = getattr(frame, "text")
                         if len(text) > 0:

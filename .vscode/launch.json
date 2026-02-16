@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "lint-metadata",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["E:\\music","-v"]
+        },
+        {
             "name": "generate-random-playlist",
             "type": "debugpy",
             "request": "launch",
@@ -12,30 +20,13 @@
             "console": "integratedTerminal",
             "args": ["-l","ratings-list.txt","-o","playlist.m3u","-g","Blues","-g","Rock","-g","Pop","-r","150","-y","1970-1979","--all"]
         },
-
         {
-            "name": "generate-ratings-list",
+            "name": "generate-metadata-list",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums"]
-        },
-        {
-            "name": "fix-media-file-names",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["test"]
-        },
-        {
-            "name": "delete-media-tag-value",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["E:\\YTM.Playlists\\Sunshine Dreams","-l","E:\\music\\Scripts\\delete-media-tag-terms.txt"]
+            "args": ["-o","ratings-list.txt", "E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums","-z"]
         },
         {
             "name": "fix-playlists",
@@ -67,7 +58,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["\\music\\Rock\\Gov't Mule\\Gov't Mule","-s","http://192.168.2.90:5000","-o",".\\output.bat"]
+            "args": ["\\music","-s","http://192.168.2.90:5000","-v"]
         },
         {
             "name": "fix-ytm-titles",
@@ -76,6 +67,22 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": ["\\YTM.Playlists"]
+        },
+        {
+            "name": "extract-covers",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["E:\\music"]
+        },
+        {
+            "name": "group-actions",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["E:\\Music","print","-l","ratings-list.txt","-t","world-music","-f","m3u","-o","world-music.m3u","-p","World Music"]
         }
     ]
 }

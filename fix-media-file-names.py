@@ -7,6 +7,8 @@ import pathlib
 from timeit import default_timer as timer
 from unidecode import unidecode
 from ffmpeg import FFmpeg
+import mutagen
+import mutagen.id3
 
 def get_ext(filename, tolower=False) -> str:
     ext = ""
@@ -53,6 +55,39 @@ def extractStrings(input:str, words:list) -> str:
 
     return ret
 
+def stripStrings(input:str, minlength=0) -> str:
+    ret = ""
+    # Anything in parens, brackets
+    ret = extractPairedCharacters(input, '(', ')')
+    ret = extractPairedCharacters(ret, '[', ']')
+    ret = extractPairedCharacters(ret, '<', '>')
+
+    # These words that appear often in YTM and torrent file names
+    ret = extractStrings(ret, ["VEVO", "vevo", "Vevo", "PMEDIA", "pmedia"])
+
+    # Trailing spaces
+    ret = ret.strip()
+
+    # Periods at the end of the base name
+    while ret[-1:] == '.':
+        ret = ret[0:-1]
+
+    # double spaces
+    ret = ret.replace('  ', ' ')
+
+    # We took everything, so maybe try something less drastic
+    # Assumes the file names are DD-TTT - Title.ext
+    if len(ret) < minlength:
+        ret = input
+        ret = ret.replace("(", "")
+        ret = ret.replace(")", "")
+        ret = ret.replace("[", "")
+        ret = ret.replace("]", "")
+        if len(ret) < minlength:
+            return input
+
+    return ret
+
 def main():
     parser = argparse.ArgumentParser(description='Convert FLAC files to mp3')
     parser.add_argument('input', help='Media file or a folder of media files')
@@ -66,7 +101,7 @@ def main():
         print("Could not parse command line. Terminating.")
         return
 
-    extensions = ["flac","mkv","mp3","m4a","m4b"]
+    extensions = ["flac","mkv","mp3","m4a","m4b","lrc"]
 
     mediafiles = list()
     if os.path.isdir(args.input):
@@ -98,46 +133,46 @@ def main():
         extension = tail[idx:]
         outputfilename = tail[:idx]
 
-        # Anything in parens, brackets
-        ret = extractPairedCharacters(outputfilename, '(', ')')
-        ret = extractPairedCharacters(ret, '[', ']')
-        ret = extractPairedCharacters(ret, '<', '>')
+        idx = outputfilename.find(" - ")
+        if idx >= 0:
+            idx += 3
 
-        # These words that appear often in YTM and torrent file names
-        ret = extractStrings(ret, ["VEVO", "vevo", "Vevo", "PMEDIA", "pmedia"])
-
-        # Trailing spaces
-        ret = ret.strip()
-
-        # Periods at the end of the base name
-        while ret[-1:] == '.':
-            ret = ret[0:-1]
-
-        # double spaces
-        ret = ret.replace('  ', ' ')
-
-        # We took everything, so maybe try something less drastic
-        # Assumes the file names are DD-TTT - Title.ext
-        if len(ret) <= 8:
-            ret = outputfilename
-            ret = ret.replace("(", "")
-            ret = ret.replace(")", "")
-            ret = ret.replace("[", "")
-            ret = ret.replace("]", "")
-            if len(ret) <= 8:
-                continue
+        ret = stripStrings(outputfilename, idx + 1)
 
         # TODO: Unicode extended characters used to bypass ASCII (e.g. emdash, division sign)
-
         if ret == outputfilename:
             continue
 
         newfilename = head + os.sep + ret + extension
+
         print("%s -> %s" % (mediafile, newfilename))
         try:
             os.rename(mediafile, newfilename)
         except Exception as e:
-            print("Error renaming %s" % (tail))
-
+            ret = outputfilename
+            ret = ret.replace('(', "")
+            ret = ret.replace(')', "")
+            ret = ret.replace('[', "")
+            ret = ret.replace(']', "")
+            newfilename = head + os.sep + ret + extension
+            print("Error renaming %s. Retry with %s" % (tail, newfilename))
+            os.rename(mediafile, newfilename)
+        else:
+            try:
+                id3file = mutagen.id3.ID3(newfilename)
+                if id3file is not None:
+                    for tag in filter(lambda t: t.startswith(("")), id3file):
+                        frame = id3file[tag]
+                        if isinstance(frame, mutagen.id3.TIT2): # type: ignore
+                            text = getattr(frame,"text")
+                            if len(text) > 0:
+                                ret = str(text[0])
+                                ret = stripStrings(ret, 0)
+                                if ret != text:
+                                    setattr(frame, "text", ret)
+                                    id3file.save()
+                                    break
+            except:
+                pass # not an MP3 file
 if __name__ == '__main__':
     main()

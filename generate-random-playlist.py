@@ -2,9 +2,7 @@
 generate-random-playlist - Look at the generate metadata database and generate a .m3u file 
 of random songs based on rating, year, genre
 '''
-import errno
 import argparse
-import os
 from pathlib import Path
 import random
 import csv
@@ -77,11 +75,13 @@ def main():
             recording = {
                 "path":line[0],
                 "artist": line[1],
-                "title": line[2],
-                "genre": line[3],
-                "rating": int(line[4]),
-                "year": int(line[5]),
-                "length": int(line[6])
+                "album": line[2],
+                "title": line[3],
+                "genre": line[4],
+                "rating": int(line[5]),
+                "year": int(line[6]),
+                "length": int(line[7]),
+                "grouping": line[8]
             }
             if args.all:
                 add = True
