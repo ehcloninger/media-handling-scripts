@@ -63,7 +63,9 @@ def add_terms_to_group(tags:list, terms:list) -> bool: # type: ignore
                     text = str(tmp[0])
                     items = text.split(GROUP_SEPARATOR)
                     for item in items:
-                        groups.add(item)
+                        item = item.strip()
+                        if len(item) > 0:
+                            groups.add(item)
                 break
     for term in terms:
         groups.add(term)
@@ -110,7 +112,7 @@ def delete_terms_from_group(tags:list, terms:list) -> bool: # type: ignore
 def main():
     parser = argparse.ArgumentParser(description='Do actions on MP3 file group tags')
     parser.add_argument('input', help='Folder of media files or a text file containing a list of files')
-    parser.add_argument('action', help='(a)dd, (c)opy, (d)elete, (m)ove, (p)rint')
+    parser.add_argument('action', help='(a)dd, (c)opy, (d)elete, (m)ove, (p)rint (s)tats')
     parser.add_argument('-l','--list', help='List of all files')
     parser.add_argument("-f", "--format", help="Format of output (depends on action)")
     parser.add_argument("-t", "--term", action="append", help="Terms to add, delete, or print")
@@ -133,7 +135,7 @@ def main():
     makedir_commands = {"bat":"MD", "ps1":"MD", "sh":"mkdir"}
 
     # The single characters are shortcuts
-    actions = ["add","a","copy","c","delete","d","move","m","print","p"]
+    actions = ["add","a","copy","c","delete","d","move","m","print","p","stats","s"]
     action = str(args.action).lower()
     idx = -1
     try:
@@ -187,9 +189,9 @@ def main():
     if args.term is not None:
         for term in args.term:
             if args.case or action == "add":
-                terms.append(str(term))
+                terms.append(str(term.replace(GROUP_SEPARATOR, "")))
             else:
-                terms.append(str(term).lower())
+                terms.append(str(term).lower().replace(GROUP_SEPARATOR, ""))
     else:
         if action != "print":
             print(Fore.RED + "Term(s) are required for '%s'" % (action) + Fore.BLACK)
@@ -214,49 +216,79 @@ def main():
     sidecar_extensions = lyrics_extensions + image_extensions
 
     if args.list is not None:
-        if action != "print":
-            print(Fore.RED + "The --list option is only valid for the 'print' action" + Fore.BLACK)
+        if action not in ["print","stats"]:
+            print(Fore.RED + "The --list option is only valid for the 'print' and 'stats' actions" + Fore.BLACK)
         else:
             with open(args.list,'rt',encoding="utf-8") as f:  
                 reader = csv.reader(f) 
                 if args.playlist is not None:
                     playlist = args.playlist
-                output_fh.write("#EXTM3U\n#PLAYLIST:%s\n" % (playlist))
-                for line in reader:
-                    if reader.line_num == 1:
-                        continue
-                    recording = {
-                        "path":line[0],
-                        "artist": line[1],
-                        "album": line[2],
-                        "title": line[3],
-                        "genre": line[4],
-                        "rating": int(line[5]),
-                        "year": int(line[6]),
-                        "length": int(line[7]),
-                        "grouping": line[8]
-                    }
+                
+                if action == "print":
+                    output_fh.write("#EXTM3U\n#PLAYLIST:%s\n" % (playlist))
+                    for line in reader:
+                        if reader.line_num == 1:
+                            continue
+                        recording = {
+                            "path":line[0],
+                            "artist": line[1],
+                            "album": line[2],
+                            "title": line[3],
+                            "genre": line[4],
+                            "rating": int(line[5]),
+                            "year": int(line[6]),
+                            "length": int(line[7]),
+                            "grouping": line[8]
+                        }
 
-                    if len(recording["grouping"]) > 0:
-                        do_print = False
-                        if len(terms) == 0:
-                            do_print = True
-                        else:
-                            items = recording["grouping"].lower().split(GROUP_SEPARATOR)
-                            for item in items:
-                                if item in terms:
-                                    do_print = True
-                                    break
+                        if len(recording["grouping"]) > 0:
+                            do_print = False
+                            if len(terms) == 0:
+                                do_print = True
+                            else:
+                                items = recording["grouping"].lower().split(GROUP_SEPARATOR)
+                                for item in items:
+                                    if item in terms:
+                                        do_print = True
+                                        break
 
-                        if do_print:
-                            if format == "txt":
-                                output_fh.write("%s: %s\n" % (recording["path"], recording["grouping"]))
-                            elif format == "m3u":
-                                output_fh.write("#EXTINF:%d, %s - %s - %s\n" % (recording["length"], recording["artist"], recording["album"], recording["title"]))
-                                output_fh.write("%s\n" % (recording["path"]))
-                            elif format == "csv":
-                                output_fh.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%d\"\n" % 
-                                                (recording["path"], recording["artist"], recording["album"], recording["title"], recording["grouping"], recording["length"]))
+                            if do_print:
+                                if format == "txt":
+                                    output_fh.write("%s: %s\n" % (recording["path"], recording["grouping"]))
+                                elif format == "m3u":
+                                    output_fh.write("#EXTINF:%d, %s - %s - %s\n" % (recording["length"], recording["artist"], recording["album"], recording["title"]))
+                                    output_fh.write("%s\n" % (recording["path"]))
+                                elif format == "csv":
+                                    output_fh.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%d\"\n" % 
+                                                    (recording["path"], recording["artist"], recording["album"], recording["title"], recording["grouping"], recording["length"]))
+                elif action == "stats":
+                    total_songs = 0
+                    groupings = dict()
+                    artists = dict()
+                    albums = dict()
+                    genres = dict()
+                    ratings = dict()
+                    years = dict()
+                    for line in reader:
+                        if reader.line_num == 1:
+                            continue
+                        recording = {
+                            "path": line[0].strip(),
+                            "artist": line[1].strip(),
+                            "album": line[2].strip(),
+                            "title": line[3].strip(),
+                            "genre": line[4].strip(),
+                            "rating": int(line[5].strip()),
+                            "year": int(line[6].strip()),
+                            "length": int(line[7].strip()),
+                            "grouping": line[8].strip()
+                        }
+                        
+                    if recording["artist"] in artists:
+                        artists[recording["artist"]] += 1
+                    else:
+                        artists[recording["artist"]] = 0
+
         return
 
     mediafiles = list()
@@ -436,3 +468,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print(Fore.BLACK + " ")
