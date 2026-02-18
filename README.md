@@ -31,10 +31,9 @@ one of these scripts. Someday...
 
 ## group-actions
 
-Perform CRUD activities on the GRP1 tag to be used to generate playlists or copy and move files based on 
-values found in the tag.
+Perform activities on the GRP1 tag to be used to generate playlists based on values found in the tag.
 
-`usage: group-actions.py [-h] [-l LIST] [-f FORMAT] [-t TERM] [-o OUTPUT] [-d DESTINATION] [-p PLAYLIST] [--dryrun] [--sidecar] [--case] [-v] input action`
+`usage: group-actions.py [-h] [-l LIST] [-f FORMAT] [-t TERM] [-o OUTPUT] [-p PLAYLIST] [-v] input action`
 
 I have a number of curated playlists that I've built over the years. When I moved to self-hosting on 
 Navidrome, the paths of the file names end up changing frequently because various factors related to
@@ -50,22 +49,12 @@ The possible actions are:
 
 - `add` or `delete` a tag to groups using the `-t` flag. You can specify this
 tag multiple times to specify multiple values. Works immediately on the MP3 files.
-- `move` or `copy` files to another location based on whether the tag exists in the group. Use the `-d`
-flag to indicate the target file system. This is
-used to put files offline to phones, SD cards, iPods, etc. Works by generating a batch file that can
-be executed separately. I chose to not do copy/move directly in the code because I don't want to do
-potentially destructive things in this program.
 - `print` the tags in various formats--CSV, text, m3u. If output is m3u, the `p` option assigns the
 value in the #PLAYLIST: field. Otherwise, it is a timestamp of the file creation time.
 - `stats` an incomplete feature to output interesting information about the library
 
 For `print` and `stats`, you can use the output of the `generate-metadata-list` tool as an input with the `-l` 
 flag to save scanning large content libraries.
-
-The `--sidecar` option pulls over the .txt and .lrc files for each song, if they exist. It also pulls over
-any .jpg or .png files in the same folder.
-
-`--case` turns on case sensitivity for the term comparisons. The code is insensitive by default.
 
 ### extract_covers
 

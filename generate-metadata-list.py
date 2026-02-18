@@ -67,7 +67,7 @@ def main():
         return
 
     outfile = open(args.output, "wt", encoding="utf-8")
-    outfile.write("\"Path\",\"Artist\",\"Album\",\"Title\",\"Genre\",\"Rating\",\"Year\",\"Length\",\"Grouping\"\n")
+    outfile.write("\"Path\",\"Artist\",\"Album\",\"Title\",\"Genre\",\"Rating\",\"Year\",\"Length\",\"Grouping\",\"File Size\"\n")
 
     total = len(mediafiles)
     i = 0
@@ -96,6 +96,7 @@ def main():
                 rating = 0
                 year = 0
                 length = int(((mp3file.info.length * 1000) + 1000)/1000)
+                filesize = os.path.getsize(mediafile)
                 title = ""
                 genre = ""
                 artist = ""
@@ -112,9 +113,9 @@ def main():
                             tmp = getattr(frame, "text")
                             if len(tmp) > 0:
                                 # if year == 0:
-                                year = str(tmp[0])
+                                year = str(tmp[0]).strip()
                                 if len(year) > 4:
-                                    print("%s is %s" % (mediafile, year))
+                                    print("%s: Year shortened to %s" % (mediafile, year))
                                     year = year[0:4]
                                 year = int(year)
                                 # else:
@@ -141,7 +142,7 @@ def main():
                                 # MBZ puts in YYYY-MM-DD if it's available. I just want the year
                                 if len(year) > 4:
                                     year = year[0:4]
-                                    print("%s is %s" % (mediafile, year))
+                                    print("%s: Year shortened to %s" % (mediafile, year))
                                 year = int(year)
                             # else:
                             #     if int(tmp[0]) != year and args.verbose:
@@ -166,7 +167,7 @@ def main():
                 if rating > 0 or args.zero:
                     if year == 0:
                         print("%s: Year is 0" % (mediafile))
-                    outfile.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%d\",\"%d\",\"%d\",\"%s\"\n" % (filepath.replace("\"","\\\"").replace('\\','/'), artist.replace("\"","\"\""), album.replace("\"","\"\""), title.replace("\"","\"\""), genre.replace("\"","\"\""), rating, year, length, grouping))
+                    outfile.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%d\",\"%d\",\"%d\",\"%s\",\"%d\"\n" % (filepath.replace("\"","\\\"").replace('\\','/'), artist.replace("\"","\"\""), album.replace("\"","\"\""), title.replace("\"","\"\""), genre.replace("\"","\"\""), rating, year, length, grouping, filesize))
             else:
                 print("Can't find necessary ID3 tags for %s" % (mediafile))
                 continue

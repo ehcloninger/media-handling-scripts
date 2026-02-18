@@ -74,7 +74,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\music"]
+            "args": ["\\\\192.168.2.40\\books\\audiobooks"]
         },
         {
             "name": "group-actions",
@@ -82,7 +82,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["E:\\Music","print","-l","ratings-list.txt","-t","world-music","-f","m3u","-o","world-music.m3u","-p","World Music"]
+            "args": [".\\Strong Persuader","print","-f","m3u","-t","XSmall"]
         }
     ]
 }
