@@ -5,7 +5,6 @@ Does actions on the grouping (GRP1) tag based on user choices.
 
 '''
 
-import csv
 import os
 import sys
 import argparse
@@ -17,7 +16,12 @@ from mutagen.mp3 import MP3
 from colorama import Fore
 import datetime
 from enum import Enum
-import glob
+from math import floor, log
+import csv
+
+def format_bytes(size):
+  power = 0 if size <= 0 else floor(log(size, 1024))
+  return f"{round(size / 1024 ** power, 2)} {['B', 'KB', 'MB', 'GB', 'TB'][int(power)]}"
 
 GROUP_SEPARATOR = "|"
 
@@ -207,12 +211,14 @@ class Action(Enum):
     DELETE = 2
     PRINT = 3
     STATS = 4
+    COPY = 5
 
 def main():
     parser = argparse.ArgumentParser(description='Do actions on MP3 file group tags')
-    parser.add_argument('input', help='Folder of media files or a text file containing a list of files')
     parser.add_argument('action', help='add, delete, print stats')
+    parser.add_argument('-i','input', help='Folder of media files or a text file containing a list of files')
     parser.add_argument('-l','--list', help='List of all files')
+    parser.add_argument('-d','--destination', help='Destination directory for copy')
     parser.add_argument("-f", "--format", help="Format of output (depends on action)")
     parser.add_argument("-t", "--term", action="append", help="Terms to add, delete, or print")
     parser.add_argument("-o", "--output", help="Output file for print or stat actions")
@@ -229,12 +235,17 @@ def main():
         "add":    Action.ADD,
         "delete": Action.DELETE,
         "print":  Action.PRINT,
-        "stats":  Action.STATS
+        "stats":  Action.STATS,
+        "copy":  Action.COPY
     }
     try:
         action = actions[args.action]
     except:
         print(Fore.RED + "Invalid action: %s" % args.action + Fore.BLACK)
+        return
+
+    if args.input is None and args.list is None:
+        print(Fore.RED + "Must provide either --input or --list argument" % args.action + Fore.BLACK)
         return
 
     output_fh = None
@@ -248,25 +259,31 @@ def main():
         except Exception as e:
             print(Fore.RED + "%s: %s" % (args.output, e) + Fore.BLACK)
             return
-        
+    
+    destination = args.destination
+    if destination is None:
+        if action in [Action.COPY]:
+            print(Fore.RED + "Destination required for copy action" + Fore.BLACK)
+            return
+
     playlist = datetime.datetime.now().strftime("%B %d, %Y %I:%M%p")
-    playlist_formats = ["m3u"]
-    text_formats = ["txt","csv"]
-    formats = playlist_formats + text_formats
+    script_formats = ["bat","ps1","sh"]
+    text_formats = ["txt","csv","m3u"]
+    formats = text_formats + script_formats
 
-    format = ""
-    if args.format is not None:
-        if action in [Action.PRINT]:
-            if args.format in formats:
-                format = args.format
-            else:
-                print(Fore.RED + "Invalid format: %s" % args.format + Fore.BLACK)
-                return
-        else:
-            format = args.format
-
-    if len(format) == 0:
+    format = args.format
+    if format is None:
         format = "txt"
+
+    if action in [Action.PRINT]:
+        if format not in text_formats:
+            print(Fore.RED + "Invalid format for print action: %s" % format + Fore.BLACK)
+            return
+
+    if action in [Action.COPY]:
+        if format not in script_formats:
+            print(Fore.RED + "Invalid format for copy action: %s" % format + Fore.BLACK)
+            return
 
     terms = list()
     if args.term is not None:
@@ -279,9 +296,18 @@ def main():
 
     media_extensions = ["mp3","m4a","m4b"]
 
+    recordings = list()
     if args.list is not None:
-        if action not in [Action.STATS, Action.PRINT]:
-            print(Fore.RED + "The --list option is only valid for the 'print' and 'stats' actions" + Fore.BLACK)
+        if action in [Action.STATS, Action.PRINT, Action.COPY]:
+            with open(args.list,'rt',encoding="utf-8") as f:  
+                reader = csv.reader(f) 
+                for line in reader:
+                    recording = Recording()
+                    recording.fromList(line)
+                    recordings.append(recording)
+        else:
+            print(Fore.RED + "The --list option is only valid for this action" + Fore.BLACK)
+            return
 
     mediafiles = list()
     if args.verbose:
@@ -301,9 +327,9 @@ def main():
             if mediafile[0] == '#':
                 mediafiles.remove(mediafile)
     
-    if len(mediafiles) == 0:
-        print(Fore.RED + "No files to process" + Fore.BLACK)
-        return
+        if len(mediafiles) == 0:
+            print(Fore.RED + "No files to process" + Fore.BLACK)
+            return
 
     if args.verbose:
         print(Fore.GREEN + "Files to process: %d" % (len(mediafiles)) + Fore.BLACK)
@@ -313,51 +339,115 @@ def main():
             playlist = args.playlist
         output_fh.write("#EXTM3U\n#PLAYLIST:%s\n" % (playlist))
  
-    created_dirs = dict()
-    for mediafile in mediafiles:
-        head,tail = os.path.split(Path(mediafile))
-        if args.verbose:
-            print(Fore.GREEN + "%s" % (mediafile) + Fore.BLACK)
-        try:
-            mp3file = MP3(mediafile)
-        except Exception as e:
-            print(Fore.RED + "Could not open: %s" % mediafile + Fore.BLACK)
-        else:
-            recording = Recording()
-            recording.fromMP3(mp3file)
-            if action == Action.DELETE:
-                tags = getattr(mp3file, "tags")
-                if tags is not None:
-                    recording.deleteGroups(terms)
-                    tags.setall('GRP1', [mutagen.id3.GRP1(text=recording.getGroupingAsString())]) # type: ignore
-                    try:
-                        mp3file.save()
-                    except Exception as e:
-                        print("Could not save %s: %s" % (mediafile, e))
-                        
-            elif action == Action.ADD:
-                tags = getattr(mp3file, "tags")
-                if tags is not None:
-                    recording.addGroups(terms)
-                    tags.setall('GRP1', [mutagen.id3.GRP1(text=recording.getGroupingAsString())]) # type: ignore
-                    try:
-                        mp3file.save()
-                    except Exception as e:
-                        print("Could not save %s: %s" % (mediafile, e))
+    copy_folders = set()
+    total_bytes = 0
+    total_files = 0
 
-            elif action == Action.PRINT:
-                do_print = False
+    if action in [Action.ADD, Action.DELETE]:
+        for mediafile in mediafiles:
+            head,tail = os.path.split(Path(mediafile))
+            if args.verbose:
+                print(Fore.GREEN + "%s" % (mediafile) + Fore.BLACK)
+            try:
+                mp3file = MP3(mediafile)
+            except Exception as e:
+                print(Fore.RED + "Could not open: %s" % mediafile + Fore.BLACK)
+            else:
+                recording = Recording()
+                recording.fromMP3(mp3file)
+                recordings.append(recording)
+                
+                if action == Action.DELETE:
+                    tags = getattr(mp3file, "tags")
+                    if tags is not None:
+                        recording.deleteGroups(terms)
+                        tags.setall('GRP1', [mutagen.id3.GRP1(text=recording.getGroupingAsString())]) # type: ignore
+                        try:
+                            mp3file.save()
+                        except Exception as e:
+                            print("Could not save %s: %s" % (mediafile, e))
+                            
+                elif action == Action.ADD:
+                    tags = getattr(mp3file, "tags")
+                    if tags is not None:
+                        recording.addGroups(terms)
+                        tags.setall('GRP1', [mutagen.id3.GRP1(text=recording.getGroupingAsString())]) # type: ignore
+                        try:
+                            mp3file.save()
+                        except Exception as e:
+                            print("Could not save %s: %s" % (mediafile, e))
+    else:
+        if len(recordings) == 0:
+            for mediafile in mediafiles:
+                head,tail = os.path.split(Path(mediafile))
+                if args.verbose:
+                    print(Fore.GREEN + "%s" % (mediafile) + Fore.BLACK)
+                try:
+                    mp3file = MP3(mediafile)
+                except Exception as e:
+                    print(Fore.RED + "Could not open: %s" % mediafile + Fore.BLACK)
+                else:
+                    recording = Recording()
+                    recording.fromMP3(mp3file)
+                    recordings.append(recording)
+
+        for recording in recordings:   
+            if action == Action.PRINT:
+                do_action = False
                 if len(terms) == 0:
-                    do_print = True
+                    do_action = True
                 else:
                     for item in recording.grouping:
                         if item in terms:
-                            do_print = True
+                            do_action = True
                             break
 
-                if do_print:
+                if do_action:
                     print_string = recording.toString(format)
                     output_fh.write("%s\n" % (print_string))
+
+            elif action == Action.COPY:
+                do_action = False
+                if len(terms) == 0:
+                    do_action = True
+                else:
+                    for item in recording.grouping:
+                        if item in terms:
+                            do_action = True
+                            break
+
+                if do_action:
+                    head,tail = os.path.split(Path(recording.path))
+                    total_bytes += recording.filesize
+                    total_files += 1
+                    copy_folders.add(head)
+
+            elif action == Action.STATS:
+                pass
+
+    if action == Action.COPY:
+        dest_folder_path = Path(destination)
+        dest_folder = str(dest_folder_path.absolute())
+        base_folder_path = Path(args.input)
+        base_folder = str(base_folder_path.absolute())
+        for folder in copy_folders:
+            src_folder_path = Path(folder)
+            src_folder = str(src_folder_path.absolute())
+            partial_src_folder = src_folder.replace(base_folder, "")
+            if partial_src_folder[0] == os.sep:
+                partial_src_folder = partial_src_folder[1:]
+            full_dest_path = os.path.join(dest_folder, partial_src_folder)
+            full_src_path = os.path.join(src_folder, "*.*")
+
+            if format in ["bat","ps1"]:
+                print_string = "ROBOCOPY \"%s\" \"%s\" /E" % (src_folder, full_dest_path)
+                output_fh.write("%s\n" % (print_string))
+            elif format in ["sh"]:
+                print_string = "mkdir -p \"%s\" && cp \"%s\" \"%s\" /E" % (src_folder, full_src_path, full_dest_path)
+                output_fh.write("%s\n" % (print_string))
+                
+        print("Files to Copy: %d" % (total_files))
+        print("Size of media files to copy: %s" % (format_bytes(total_bytes)))
 
 if __name__ == '__main__':
     main()

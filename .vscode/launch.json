@@ -26,7 +26,15 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["-o","ratings-list.txt", "E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums","-z"]
+            "args": ["-o","ratings-list-windows.txt", "E:\\music","-z"]
+        },
+        {
+            "name": "generate-metadata-list (Linux)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["-o","ratings-list-linux.txt", "E:\\music","-v","-x","E:/music/","-p","/mnt/music/Albums","-z"]
         },
         {
             "name": "fix-playlists",
@@ -43,14 +51,6 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": ["e:\\new\\albums","-o","-d"]
-        },
-        {
-            "name": "id3-rate-group",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["311","-g","-o"]
         },
         {
             "name": "search-mbz-ratings",
@@ -82,7 +82,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": [".\\Strong Persuader","print","-f","m3u","-t","XSmall"]
+            "args": ["E:\\music","copy","-t","Medium","-t","XSmall","-t","Small","-d","F:\\Test","-f","bat","-o","do-copy.bat","-l","ratings-list-windows.txt"]
         }
     ]
 }

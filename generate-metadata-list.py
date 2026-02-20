@@ -28,8 +28,8 @@ def main():
     parser = argparse.ArgumentParser(description='Group and rate media files with ID3 tags')
     parser.add_argument('input', help='Media file or a folder of media files')
     parser.add_argument("-o", "--output", help="Output File", default="ratings-list.txt")
-    parser.add_argument("-x", "--extractprefix", help="Prefix to remove from path names", default="E:\\Music\\")
-    parser.add_argument("-p", "--prefix", help="Prefix to add from path names", default="/mnt/music/Albums")
+    parser.add_argument("-x", "--extractprefix", help="Prefix to remove from path names")
+    parser.add_argument("-p", "--prefix", help="Prefix to add from path names")
     parser.add_argument("-v", "--verbose", help="Be verbose (default: False)", action="store_true", default=False)
     parser.add_argument("-z", "--zero", help="Output files with 0 rating (default: False)", action="store_true", default=False)
 
@@ -135,15 +135,16 @@ def main():
                         # accurate historically, I deliberately want each album to
                         # have the same year for each track so that Navidrome
                         # doesn't show multiple albums differentiated only by year.
-                        tmp = getattr(frame, "text")
-                        if len(tmp) > 0:
-                            if year == 0:
-                                year = str(tmp[0])
-                                # MBZ puts in YYYY-MM-DD if it's available. I just want the year
-                                if len(year) > 4:
-                                    year = year[0:4]
-                                    print("%s: Year shortened to %s" % (mediafile, year))
-                                year = int(year)
+                        if year == 0:
+                            tmp = getattr(frame, "text")
+                            if len(tmp) > 0:
+                                if year == 0:
+                                    year = str(tmp[0])
+                                    # MBZ puts in YYYY-MM-DD if it's available. I just want the year
+                                    if len(year) > 4:
+                                        year = year[0:4]
+                                        print("%s: Year shortened to %s" % (mediafile, year))
+                                    year = int(year)
                             # else:
                             #     if int(tmp[0]) != year and args.verbose:
                             #         print("Conflicting dates for %s (%s, %d)" % (mediafile, tmp[0], year))
